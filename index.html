@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест в Telegram</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f7f7f7;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .question {
+            font-size: 18px;
+        }
+        #score {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="question" id="question">Сколько будет 2 + 2?</div>
+        <input type="text" id="answer" placeholder="Введите ответ" />
+        <button onclick="checkAnswer()">Ответить</button>
+        <div id="score">Баллы: 0</div>
+    </div>
+
+    <script>
+        let score = 0;
+        let currentQuestion = 0;
+
+        const questions = [
+            { question: "Сколько будет 2 + 2?", answer: "4" },
+            { question: "Какая столица Франции?", answer: "париж" },
+            { question: "Сколько планет в Солнечной системе?", answer: "8" },
+        ];
+
+        function checkAnswer() {
+            const userAnswer = document.getElementById('answer').value.trim().toLowerCase();
+            const correctAnswer = questions[currentQuestion].answer.toLowerCase();
+
+            if (userAnswer === correctAnswer) {
+                score++;
+                alert("Правильно!");
+            } else {
+                alert("Неправильно!");
+            }
+
+            currentQuestion++;
+
+            if (currentQuestion < questions.length) {
+                document.getElementById('question').textContent = questions[currentQuestion].question;
+                document.getElementById('answer').value = "";
+            } else {
+                document.getElementById('question').textContent = "Тест завершен!";
+                document.getElementById('score').textContent = Вы набрали ${score} баллов.;
+            }
+        }
+    </script>
+</body>
+</html>
