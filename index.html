@@ -3,71 +3,507 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Фиолетовый Магазин</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>RentSpace - Аренда недвижимости</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .map-container {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 16px 0;
+            border: 1px solid #e0e0e9;
+            height: 400px;
+        }
+        
+        .mapboxgl-ctrl {
+            border-radius: 8px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        }
+        
+        .mapboxgl-marker {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238a4fff"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>');
+            background-size: contain;
+            width: 32px !important;
+            height: 32px !important;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <div class="header-container">
-            <h1><i class="fas fa-store"></i> Фиолетовый Магазин</h1>
-            <div class="cart-icon" onclick="showCart()">
-                <i class="fas fa-shopping-cart"></i>
-                <span id="cart-count">0</span>
-            </div>
-        </div>
-    </header>
-
-    <main>
-        <div id="products-container" class="products-container">
-            <!-- Товары будут загружены через JS -->
+    <div class="container">
+        <!-- Языковой переключатель -->
+        <div class="language-switcher">
+            <button class="lang-btn active" data-lang="ru">RU</button>
+            <button class="lang-btn" data-lang="uz">UZ</button>
         </div>
 
-        <div id="cart-container" class="cart-container hidden">
-            <div class="cart-header">
-                <h2><i class="fas fa-shopping-basket"></i> Ваша корзина</h2>
-                <button onclick="hideCart()" class="close-btn">&times;</button>
+        <!-- Главная страница -->
+        <div id="main-page" class="main-page">
+            <div class="logo">
+                <i class="fas fa-building"></i>
+                <span data-translate="app_name">RentSpace</span>
             </div>
-            <div id="cart-items" class="cart-items">
-                <!-- Товары в корзине -->
+            <h1 data-translate="main_title">Аренда недвижимости</h1>
+            <p class="subtitle" data-translate="main_subtitle">Найдите идеальное помещение для ваших нужд</p>
+            
+            <div class="property-type-selector">
+                <div class="type-tabs">
+                    <button class="type-tab active" data-type="commercial">
+                        <i class="fas fa-store"></i>
+                        <span data-translate="commercial">Коммерческая</span>
+                    </button>
+                    <button class="type-tab" data-type="residential">
+                        <i class="fas fa-home"></i>
+                        <span data-translate="residential">Жилая</span>
+                    </button>
+                </div>
             </div>
-            <div class="cart-footer">
-                <div class="total">Итого: <span id="total-price">0 руб.</span></div>
-                <button onclick="checkout()" class="checkout-btn">
-                    <i class="fas fa-credit-card"></i> Оформить заказ
+            
+            <div class="action-buttons">
+                <button id="rent-out-btn" class="btn primary">
+                    <i class="fas fa-plus-circle"></i> <span data-translate="rent_out">Сдать помещение</span>
+                </button>
+                <button id="rent-btn" class="btn secondary">
+                    <i class="fas fa-search"></i> <span data-translate="find_property">Найти помещение</span>
                 </button>
             </div>
         </div>
 
-        <div id="checkout-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-btn" onclick="closeModal()">&times;</span>
-                <h2><i class="fas fa-truck"></i> Оформление заказа</h2>
-                <form id="checkout-form">
+        <!-- Форма сдачи -->
+        <div id="rent-out-form" class="form-container" style="display: none;">
+            <div class="form-header">
+                <h1><i class="fas fa-plus-circle"></i> <span data-translate="rent_out_form">Сдать помещение</span></h1>
+                <button id="back-to-main" class="btn icon-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            
+            <form id="property-form">
+                <!-- Основная информация -->
+                <div class="form-section">
+                    <h2><i class="fas fa-info-circle"></i> <span data-translate="basic_info">Основная информация</span></h2>
                     <div class="form-group">
-                        <label for="name"><i class="fas fa-user"></i> Ваше имя:</label>
-                        <input type="text" id="name" required placeholder="Иван Иванов">
+                        <label for="title" data-translate="ad_title">Название объявления*</label>
+                        <input type="text" id="title" placeholder="Например: Сдам офис в бизнес-центре" required>
+                        <div id="type-detected" class="type-info">
+                            <i class="fas fa-magic"></i> <span data-translate="auto_detected">Определено:</span> <span id="property-type">Не определен</span>
+                        </div>
                     </div>
+
                     <div class="form-group">
-                        <label for="phone"><i class="fas fa-phone"></i> Телефон:</label>
-                        <input type="tel" id="phone" required placeholder="+7 (999) 123-45-67">
+                        <label for="description" data-translate="description">Описание* (не менее 30 слов)</label>
+                        <textarea id="description" rows="5" required minlength="150"></textarea>
+                        <div class="word-count">
+                            <i class="fas fa-font"></i> <span data-translate="words">Слов:</span> <span id="word-counter">0</span>/30
+                        </div>
                     </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="price" data-translate="price">Цена* (в месяц)</label>
+                            <div class="input-with-icon">
+                                <input type="number" id="price" placeholder="1000000" required>
+                                <span class="input-icon">сум</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="price-negotiable" data-translate="negotiable_price">Договорная цена</label>
+                            <label class="switch">
+                                <input type="checkbox" id="price-negotiable">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Фотографии -->
+                <div class="form-section">
+                    <h2><i class="fas fa-camera"></i> <span data-translate="photos">Фотографии</span></h2>
+                    <div class="upload-area" id="upload-area">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p data-translate="drag_photos">Перетащите фото сюда или <span class="link" data-translate="select_files">выберите файлы</span></p>
+                        <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+                    </div>
+                    <div id="preview-container" class="preview-container"></div>
+                </div>
+
+                <!-- Характеристики -->
+                <div class="form-section">
+                    <h2><i class="fas fa-ruler-combined"></i> <span data-translate="characteristics">Характеристики</span></h2>
+                    
                     <div class="form-group">
-                        <label for="address"><i class="fas fa-map-marker-alt"></i> Адрес доставки:</label>
-                        <textarea id="address" required placeholder="Город, улица, дом, квартира"></textarea>
+                        <label data-translate="property_type">Тип недвижимости*</label>
+                        <div class="radio-group grid-3" id="property-type-selector">
+                            <!-- Динамически заполняется в JS -->
+                        </div>
                     </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="total-area" data-translate="total_area">Общая площадь (м²)*</label>
+                            <input type="number" id="total-area" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="usable-area" data-translate="usable_area">Полезная площадь (м²)</label>
+                            <input type="number" id="usable-area">
+                        </div>
+                    </div>
+
+                    <div id="commercial-fields">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="location-type" data-translate="location_type">Расположение*</label>
+                                <select id="location-type" required>
+                                    <option value="" data-translate="select_type">Выберите тип</option>
+                                    <option value="business_center" data-translate="business_center">Бизнес центр</option>
+                                    <option value="administrative" data-translate="administrative">Административное здание</option>
+                                    <option value="residential_building" data-translate="residential_building">Жилой дом</option>
+                                    <option value="shopping_center" data-translate="shopping_center">Торговый центр</option>
+                                    <option value="industrial" data-translate="industrial">Промзона</option>
+                                    <option value="standalone" data-translate="standalone">Отдельно стоящее здание</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="floor" data-translate="floor">Этаж*</label>
+                                <input type="number" id="floor" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="total-floors" data-translate="total_floors">Этажность дома*</label>
+                                <input type="number" id="total-floors" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ceiling-height" data-translate="ceiling_height">Высота потолков (м)</label>
+                                <input type="number" step="0.1" id="ceiling-height">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-translate="renovation">Ремонт*</label>
+                            <div class="radio-group">
+                                <label class="radio-card">
+                                    <input type="radio" name="renovation" value="design_project" required>
+                                    <div class="radio-content">
+                                        <span data-translate="design_project">Авторский проект</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="renovation" value="euro">
+                                    <div class="radio-content">
+                                        <span data-translate="euro_renovation">Евроремонт</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="renovation" value="medium">
+                                    <div class="radio-content">
+                                        <span data-translate="medium_renovation">Средний</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="renovation" value="rough">
+                                    <div class="radio-content">
+                                        <span data-translate="rough_renovation">Черновая отделка</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-translate="facilities">В помещении есть</label>
+                            <div class="checkbox-grid" id="commercial-facilities">
+                                <!-- Динамически заполняется в JS -->
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-translate="parking">Наличие парковки*</label>
+                            <div class="radio-group">
+                                <label class="radio-card">
+                                    <input type="radio" name="parking" value="yes" required>
+                                    <div class="radio-content">
+                                        <span data-translate="yes">Есть</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="parking" value="no">
+                                    <div class="radio-content">
+                                        <span data-translate="no">Нет</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="residential-fields" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="rooms" data-translate="rooms">Количество комнат*</label>
+                                <select id="rooms" required>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4+</option>
+                                    <option value="studio" data-translate="studio">Студия</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="bathrooms" data-translate="bathrooms">Санузлы*</label>
+                                <select id="bathrooms" required>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3+</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="res-floor" data-translate="floor">Этаж*</label>
+                                <input type="number" id="res-floor" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="res-total-floors" data-translate="total_floors">Этажность дома*</label>
+                                <input type="number" id="res-total-floors" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-translate="res_renovation">Ремонт*</label>
+                            <div class="radio-group">
+                                <label class="radio-card">
+                                    <input type="radio" name="res-renovation" value="design_project" required>
+                                    <div class="radio-content">
+                                        <span data-translate="design_project">Авторский проект</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="res-renovation" value="euro">
+                                    <div class="radio-content">
+                                        <span data-translate="euro_renovation">Евроремонт</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="res-renovation" value="medium">
+                                    <div class="radio-content">
+                                        <span data-translate="medium_renovation">Средний</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="res-renovation" value="rough">
+                                    <div class="radio-content">
+                                        <span data-translate="rough_renovation">Черновая отделка</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-translate="res_facilities">В квартире есть</label>
+                            <div class="checkbox-grid" id="residential-facilities">
+                                <!-- Динамически заполняется в JS -->
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-translate="furniture">Мебель*</label>
+                            <div class="radio-group">
+                                <label class="radio-card">
+                                    <input type="radio" name="furniture" value="full" required>
+                                    <div class="radio-content">
+                                        <span data-translate="full_furniture">Полностью меблирована</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="furniture" value="partial">
+                                    <div class="radio-content">
+                                        <span data-translate="partial_furniture">Частично меблирована</span>
+                                    </div>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="furniture" value="none">
+                                    <div class="radio-content">
+                                        <span data-translate="no_furniture">Без мебели</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Местоположение -->
+                <div class="form-section">
+                    <h2><i class="fas fa-map-marker-alt"></i> <span data-translate="location">Местоположение</span></h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="region" data-translate="region">Область*</label>
+                            <select id="region" required>
+                                <option value="" data-translate="select_region">Выберите область</option>
+                                <option value="tashkent" data-translate="tashkent_city">Ташкент</option>
+                                <option value="tashkent_region" data-translate="tashkent_region">Ташкентская</option>
+                                <option value="samarkand" data-translate="samarkand">Самаркандская</option>
+                                <option value="bukhara" data-translate="bukhara">Бухарская</option>
+                                <option value="andijan" data-translate="andijan">Андижанская</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="city" data-translate="city">Город*</label>
+                            <select id="city" disabled required>
+                                <option value="" data-translate="select_city">Сначала выберите область</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="district" data-translate="district">Район</label>
+                            <select id="district" disabled>
+                                <option value="" data-translate="select_district">Сначала выберите город</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div class="form-group">
-                        <label for="comments"><i class="fas fa-comment"></i> Комментарии:</label>
-                        <textarea id="comments" placeholder="Дополнительные пожелания"></textarea>
+                        <label for="address" data-translate="address">Адрес* (улица, дом)</label>
+                        <input type="text" id="address" placeholder="Например: ул. Навои, 15" required>
                     </div>
-                    <button type="submit" class="submit-btn">
-                        <i class="fas fa-paper-plane"></i> Отправить заказ
+                    
+                    <div id="map" class="map-container"></div>
+                    <button type="button" id="set-location" class="btn outline">
+                        <i class="fas fa-map-marker-alt"></i> <span data-translate="set_on_map">Указать на карте</span>
                     </button>
-                </form>
+                </div>
+
+                <!-- Контактная информация -->
+                <div class="form-section">
+                    <h2><i class="fas fa-user"></i> <span data-translate="contact_info">Контактная информация</span></h2>
+                    <div class="form-group">
+                        <label for="contact-person" data-translate="contact_person">Контактное лицо*</label>
+                        <input type="text" id="contact-person" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone" data-translate="phone">Номер телефона*</label>
+                        <input type="tel" id="phone" required>
+                    </div>
+                </div>
+
+                <!-- Кнопки отправки -->
+                <div class="form-actions">
+                    <button type="button" id="preview-btn" class="btn outline">
+                        <i class="fas fa-eye"></i> <span data-translate="preview">Предпросмотр</span>
+                    </button>
+                    <button type="submit" class="btn primary">
+                        <i class="fas fa-paper-plane"></i> <span data-translate="publish">Опубликовать</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Страница аренды -->
+        <div id="rent-page" class="rent-page" style="display: none;">
+            <div class="form-header">
+                <h1><i class="fas fa-search"></i> <span data-translate="find_property">Найти помещение</span></h1>
+                <button id="back-to-main-rent" class="btn icon-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            
+            <!-- Переключатель типа недвижимости -->
+            <div class="property-type-selector">
+                <div class="type-tabs">
+                    <button class="type-tab active" data-type="commercial">
+                        <i class="fas fa-store"></i>
+                        <span data-translate="commercial">Коммерческая</span>
+                    </button>
+                    <button class="type-tab" data-type="residential">
+                        <i class="fas fa-home"></i>
+                        <span data-translate="residential">Жилая</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Карта и переключатель -->
+            <div class="map-toggle">
+                <button id="toggle-map-btn" class="btn outline">
+                    <i class="fas fa-map"></i> <span data-translate="show_map">Показать карту</span>
+                </button>
+            </div>
+            
+            <div id="map-rent" class="map-container" style="display: none; height: 500px;"></div>
+            
+            <!-- Фильтры -->
+            <div class="filters-section">
+                <h2><i class="fas fa-filter"></i> <span data-translate="filters">Фильтры</span></h2>
+                
+                <div class="filters-grid" id="filters-container">
+                    <!-- Динамически заполняется в JS -->
+                </div>
+                
+                <div class="filter-actions">
+                    <button id="reset-filters" class="btn outline">
+                        <i class="fas fa-broom"></i> <span data-translate="reset">Сбросить</span>
+                    </button>
+                    <button id="apply-filters" class="btn primary">
+                        <i class="fas fa-check"></i> <span data-translate="apply">Применить</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Список объявлений -->
+            <div class="listings-section">
+                <div class="listings-header">
+                    <h2><i class="fas fa-list"></i> <span data-translate="found">Найдено</span> <span id="results-count">0</span> <span data-translate="listings">объявлений</span></h2>
+                    
+                    <div class="sort-options">
+                        <label for="sort-by" data-translate="sort_by">Сортировка:</label>
+                        <select id="sort-by">
+                            <option value="price-asc" data-translate="price_low">По цене (дешевые сначала)</option>
+                            <option value="price-desc" data-translate="price_high">По цене (дорогие сначала)</option>
+                            <option value="date-desc" data-translate="new_first">Сначала новые</option>
+                            <option value="area-desc" data-translate="area">По площади</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="listings-container" class="listings-container">
+                    <!-- Здесь будут загружаться объявления -->
+                </div>
+                
+                <div class="pagination">
+                    <button id="prev-page" class="btn icon-btn" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="current-page">1</span>
+                    <button id="next-page" class="btn icon-btn" disabled>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
-    </main>
 
+        <!-- Страница предпросмотра -->
+        <div id="preview-page" class="preview-page" style="display: none;">
+            <div class="preview-header">
+                <h1><i class="fas fa-eye"></i> <span data-translate="ad_preview">Предпросмотр объявления</span></h1>
+                <button id="back-to-form" class="btn icon-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            
+            <div id="preview-content" class="preview-content"></div>
+            
+            <div class="preview-actions">
+                <button id="edit-btn" class="btn outline">
+                    <i class="fas fa-edit"></i> <span data-translate="edit">Редактировать</span>
+                </button>
+                <button id="publish-btn" class="btn primary">
+                    <i class="fas fa-paper-plane"></i> <span data-translate="publish">Опубликовать</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
